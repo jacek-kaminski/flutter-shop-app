@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import 'product_provider.dart';
 
@@ -50,16 +52,35 @@ class ProductsProvider with ChangeNotifier {
     return _items.firstWhere((product) => product.id == id);
   }
 
-  void addProduct(ProductProvider product) {
-    final newProduct = ProductProvider(
-      title: product.title,
-      description: product.description,
-      price: product.price,
-      imageUrl: product.imageUrl,
-      id: DateTime.now().toString(),
-    );
-    _items.add(newProduct);
-    notifyListeners();
+  Future<void> addProduct(ProductProvider product) {
+    final url = Uri.parse(
+        'https://flutter-update-79bb9-default-rtdb.europe-west1.firebasedatabase.app/products');
+
+    return http
+        .post(
+      url,
+      body: json.encode({
+        'title': product.title,
+        'description': product.description,
+        'imageUrl': product.imageUrl,
+        'price': product.price,
+        'isFavorite': product.isFavorite,
+      }),
+    )
+        .then((response) {
+      final newProduct = ProductProvider(
+        title: product.title,
+        description: product.description,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        id: json.decode(response.body)['name'],
+        //response.body is a map with id value in 'name' key
+      );
+      _items.add(newProduct);
+      notifyListeners();
+    }).catchError((error) {
+      throw error; //we are throwing here to catch this second error o other place
+    });
   }
 
   void updateProduct(String id, ProductProvider newProduct) {
